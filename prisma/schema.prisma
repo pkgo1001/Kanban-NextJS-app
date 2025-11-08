@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String    // Hashed password
+  name              String?   // Display name
+  emailVerified     Boolean   @default(false)
+  emailVerificationToken String?
+  passwordResetToken String?   @unique
+  passwordResetExpires DateTime?
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  ownedTasks        Task[]    @relation("TaskOwner")
+  assignee          Assignee? @relation(fields: [assigneeId], references: [id])
+  assigneeId        String?   @unique
+  
+  @@map("users")
+}
+
+model Assignee {
+  id         String @id @default(cuid())
+  name       String @unique
+  email      String @unique
+  role       String
+  department String
+  avatar     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  tasks      Task[]
+  user       User?  // Optional link to user account
+  
+  @@map("assignees")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  priority    Priority @default(MEDIUM)
+  status      Status   @default(TODO)
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  ownerId     String?   // User who created/owns the task
+  owner       User?     @relation("TaskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  assigneeId  String?   // Team member assigned to the task
+  assignee    Assignee? @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  tags        TaskTag[]
+  
+  @@map("tasks")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?
+  createdAt DateTime @default(now())
+  
+  // Relations
+  tasks     TaskTag[]
+  
+  @@map("tags")
+}
+
+model TaskTag {
+  id     String @id @default(cuid())
+  taskId String
+  tagId  String
+  
+  // Relations
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@unique([taskId, tagId])
+  @@map("task_tags")
+}
+
+enum Priority {
+  LOW
+  MEDIUM  
+  HIGH
+}
+
+enum Status {
+  TODO
+  IN_PROGRESS
+  DONE
+}
