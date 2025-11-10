@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -150,7 +151,12 @@ export function AddTaskDialog({ open, defaultStatus, onClose, onSave }: AddTaskD
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter task description" {...field} />
+                    <Textarea 
+                      placeholder="Enter task description" 
+                      className="resize-none"
+                      rows={4}
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

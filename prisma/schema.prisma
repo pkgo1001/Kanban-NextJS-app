@@ -15,6 +15,7 @@ model User {
   email             String    @unique
   password          String    // Hashed password
   name              String?   // Display name
+  role              Role      @default(EMPLOYEE)  // User role for permissions
   emailVerified     Boolean   @default(false)
   emailVerificationToken String?
   passwordResetToken String?   @unique
@@ -103,4 +104,11 @@ enum Status {
   TODO
   IN_PROGRESS
   DONE
+}
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  EMPLOYEE
+  VIEWER
 }

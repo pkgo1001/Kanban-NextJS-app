@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Priority, Status } from '@prisma/client'
 import { Task, TaskPriority, TaskStatus } from '@/components/task-card'
+import { getAuthenticatedUser } from '@/lib/auth-helpers'
+import { canEditTask, canDeleteTask, canMoveTask } from '@/lib/permissions'
 
 // Type conversion utilities
 const priorityFromEnum = (priority: Priority): TaskPriority => {
@@ -47,6 +49,8 @@ const transformTaskFromDb = (dbTask: any): Task => {
     priority: priorityFromEnum(dbTask.priority),
     status: statusFromEnum(dbTask.status),
     assignee: dbTask.assignee?.name || undefined,
+    assigneeId: dbTask.assigneeId || null,
+    ownerId: dbTask.ownerId || null,
     dueDate: dbTask.dueDate ? dbTask.dueDate.toISOString().split('T')[0] : undefined,
     tags: dbTask.tags?.map((taskTag: any) => taskTag.tag.name) || []
   }
@@ -60,7 +64,71 @@ interface RouteParams {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const taskId = params.id
+    
+    // Check authentication
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get the existing task
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: {
+        id: true,
+        status: true,
+        ownerId: true,
+        assigneeId: true
+      }
+    });
+
+    if (!existingTask) {
+      return NextResponse.json(
+        { error: 'Task not found' },
+        { status: 404 }
+      );
+    }
+
     const taskData = await request.json()
+
+    // Check if this is a status change (move operation)
+    const isStatusChange = taskData.status !== undefined && 
+                           statusToEnum(taskData.status) !== existingTask.status;
+
+    if (isStatusChange) {
+      // Check move permission (Employees can only move their own tasks)
+      const canMove = canMoveTask({
+        userRole: user.role,
+        userId: user.id,
+        userAssigneeId: user.assigneeId || null,
+        taskAssigneeId: existingTask.assigneeId,
+        taskOwnerId: existingTask.ownerId
+      });
+
+      if (!canMove) {
+        return NextResponse.json({
+          error: 'You can only move tasks assigned to you'
+        }, { status: 403 });
+      }
+    } else {
+      // Check edit permission (for other changes)
+      const canEdit = canEditTask({
+        userRole: user.role,
+        userId: user.id,
+        taskOwnerId: existingTask.ownerId,
+        taskAssigneeId: existingTask.assigneeId,
+        userAssigneeId: user.assigneeId || null
+      });
+
+      if (!canEdit) {
+        return NextResponse.json({
+          error: 'You do not have permission to edit this task'
+        }, { status: 403 });
+      }
+    }
 
     // Find assignee if provided
     let assigneeId: string | null = null
@@ -159,6 +227,48 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const taskId = params.id
+    
+    // Check authentication
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get the existing task
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: {
+        id: true,
+        ownerId: true,
+        assigneeId: true
+      }
+    });
+
+    if (!existingTask) {
+      return NextResponse.json(
+        { error: 'Task not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check move permission (drag & drop)
+    const canMove = canMoveTask({
+      userRole: user.role,
+      userId: user.id,
+      userAssigneeId: user.assigneeId || null,
+      taskAssigneeId: existingTask.assigneeId,
+      taskOwnerId: existingTask.ownerId
+    });
+
+    if (!canMove) {
+      return NextResponse.json({
+        error: 'You can only move tasks assigned to you'
+      }, { status: 403 });
+    }
+
     const { status } = await request.json()
 
     const updatedTask = await prisma.task.update({
@@ -190,6 +300,47 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const taskId = params.id
+    
+    // Check authentication
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get the existing task
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: {
+        id: true,
+        ownerId: true,
+        assigneeId: true
+      }
+    });
+
+    if (!existingTask) {
+      return NextResponse.json(
+        { error: 'Task not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check delete permission
+    const canDelete = canDeleteTask({
+      userRole: user.role,
+      userId: user.id,
+      taskOwnerId: existingTask.ownerId,
+      taskAssigneeId: existingTask.assigneeId,
+      userAssigneeId: user.assigneeId || null
+    });
+
+    if (!canDelete) {
+      return NextResponse.json({
+        error: 'You do not have permission to delete this task'
+      }, { status: 403 });
+    }
 
     await prisma.task.delete({
       where: { id: taskId }

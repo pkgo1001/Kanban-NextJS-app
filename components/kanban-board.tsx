@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button"
 import { TaskCard, type Task, type TaskStatus } from "@/components/task-card"
 import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { AddTaskDialog } from "@/components/add-task-dialog"
-import { Plus, MoreHorizontal, Minimize2, Maximize2, Loader2, Palette } from "lucide-react"
+import { ViewTaskDialog } from "@/components/view-task-dialog"
+import { Input } from "@/components/ui/input"
+import { Plus, MoreHorizontal, Minimize2, Maximize2, Loader2, Palette, Shield, X, Search } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { usePermissions } from "@/lib/hooks/usePermissions"
 import {
   DndContext,
   DragEndEvent,
@@ -29,6 +33,7 @@ import {
   createTask,
   updateTask,
   updateTaskStatus,
+  deleteTask,
 } from "@/lib/db-operations"
 import {
   DropdownMenu,
@@ -92,11 +97,16 @@ function DroppableArea({
 }
 
 export function KanbanBoard({}: KanbanBoardProps) {
+  // Auth and permissions
+  const { user } = useAuth()
+  const permissions = usePermissions()
+  
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [viewingTask, setViewingTask] = useState<Task | null>(null)
   const [addingTaskForColumn, setAddingTaskForColumn] = useState<TaskStatus | null>(null)
   const [mounted, setMounted] = useState(false)
   const [originalTaskStatus, setOriginalTaskStatus] = useState<Record<string, TaskStatus>>({})
@@ -114,6 +124,13 @@ export function KanbanBoard({}: KanbanBoardProps) {
     todo: "bg-purple-50 dark:bg-purple-900/20",
     "in-progress": "bg-blue-50 dark:bg-blue-900/20",
     done: "bg-green-50 dark:bg-green-900/20"
+  })
+
+  // Column filter management
+  const [columnFilters, setColumnFilters] = useState<Record<TaskStatus, string>>({
+    todo: "",
+    "in-progress": "",
+    done: ""
   })
 
   // Load tasks from database
@@ -181,6 +198,20 @@ export function KanbanBoard({}: KanbanBoardProps) {
     setEditingTask(task)
   }
 
+  const handleViewTask = (task: Task) => {
+    setViewingTask(task)
+  }
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await deleteTask(taskId)
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId))
+    } catch (err) {
+      console.error('Error deleting task:', err)
+      setError('Failed to delete task')
+    }
+  }
+
   const handleTaskCreate = async (newTaskData: Omit<Task, 'id'>) => {
     try {
       const newTask = await createTask(newTaskData)
@@ -192,11 +223,79 @@ export function KanbanBoard({}: KanbanBoardProps) {
   }
 
   const getTasksByStatus = (status: TaskStatus) => {
-    return tasks.filter(task => task.status === status)
+    let filteredTasks = tasks.filter(task => task.status === status)
+    
+    // Apply column filter if exists
+    const filterText = columnFilters[status].toLowerCase().trim()
+    if (filterText) {
+      filteredTasks = filteredTasks.filter(task => {
+        const titleMatch = task.title.toLowerCase().includes(filterText)
+        const descMatch = task.description?.toLowerCase().includes(filterText) || false
+        const assigneeMatch = task.assignee?.toLowerCase().includes(filterText) || false
+        const tagsMatch = task.tags?.some(tag => tag.toLowerCase().includes(filterText)) || false
+        const priorityMatch = task.priority.toLowerCase().includes(filterText)
+        
+        return titleMatch || descMatch || assigneeMatch || tagsMatch || priorityMatch
+      })
+    }
+    
+    // Sort tasks: user's assigned tasks first, then others
+    return filteredTasks.sort((a, b) => {
+      const aIsUserTask = user?.assigneeId && a.assigneeId === user.assigneeId
+      const bIsUserTask = user?.assigneeId && b.assigneeId === user.assigneeId
+      
+      if (aIsUserTask && !bIsUserTask) return -1
+      if (!aIsUserTask && bIsUserTask) return 1
+      return 0 // Keep original order for same priority
+    })
+  }
+  
+  // Helper function to get task-specific permissions
+  const getTaskPermissions = (task: Task) => {
+    if (!user) {
+      return { canEdit: false, canMove: false, canDelete: false }
+    }
+    
+    const userRole = permissions.userRole
+    const isAdmin = userRole === 'ADMIN'
+    const isSupervisor = userRole === 'SUPERVISOR'
+    const isEmployee = userRole === 'EMPLOYEE'
+    const isTaskAssignedToUser = user.assigneeId && task.assigneeId === user.assigneeId
+    
+    // Admins and Supervisors can edit, move, and delete any task
+    if (isAdmin || isSupervisor) {
+      return { canEdit: true, canMove: true, canDelete: true }
+    }
+    
+    // Employees can only move tasks assigned to them
+    if (isEmployee) {
+      return {
+        canEdit: false,
+        canMove: isTaskAssignedToUser,
+        canDelete: false
+      }
+    }
+    
+    // Viewers can't edit, move, or delete any tasks
+    return { canEdit: false, canMove: false, canDelete: false }
   }
 
   const handleAddTask = (status: TaskStatus) => {
     setAddingTaskForColumn(status)
+  }
+
+  const handleFilterChange = (status: TaskStatus, value: string) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [status]: value
+    }))
+  }
+
+  const handleClearFilter = (status: TaskStatus) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [status]: ""
+    }))
   }
 
   const handleToggleCardMinimize = (taskId: string) => {
@@ -257,14 +356,35 @@ export function KanbanBoard({}: KanbanBoardProps) {
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event
     const task = tasks.find(task => task.id === active.id)
-    setActiveTask(task || null)
     
-    // Store the original status before any drag operations
-    if (task) {
+    // Check if user has permission to move this task
+    if (task && user) {
+      // Check permissions using the permission functions directly
+      const canMove = permissions.userRole === 'ADMIN' || permissions.userRole === 'SUPERVISOR' ||
+        (permissions.userRole === 'EMPLOYEE' && user.assigneeId && task.assigneeId === user.assigneeId)
+      
+      if (!canMove) {
+        // Prevent drag operation and show error message
+        const errorMsg = permissions.userRole === 'VIEWER' 
+          ? 'Viewers cannot move tasks'
+          : 'You can only move tasks assigned to you'
+        
+        setError(errorMsg)
+        setTimeout(() => setError(null), 3000)
+        
+        // Don't set activeTask to prevent the drag operation
+        return
+      }
+      
+      setActiveTask(task)
+      
+      // Store the original status before any drag operations
       setOriginalTaskStatus(prev => ({
         ...prev,
         [task.id]: task.status
       }))
+    } else {
+      setActiveTask(null)
     }
   }
 
@@ -350,6 +470,22 @@ export function KanbanBoard({}: KanbanBoardProps) {
 
     // Only make API call if the status actually changed from the original
     if (newStatus !== originalStatus) {
+      // Check if user has permission to move this task
+      // For viewers, they can't move anything
+      // For employees, they can only move their own tasks
+      if (permissions.userRole === 'VIEWER') {
+        setError('Viewers cannot move tasks')
+        setTimeout(() => setError(null), 3000)
+        return
+      }
+      
+      if (permissions.userRole === 'EMPLOYEE') {
+        // Employees can only move tasks assigned to them
+        // We need to check if the task's assignee matches the user's assignee
+        // This is enforced on the backend, but we show a friendly error here
+        // Note: We'll let the API handle the actual permission check
+      }
+      
       handleTaskStatusChange(taskId, newStatus)
     }
   }
@@ -392,7 +528,20 @@ export function KanbanBoard({}: KanbanBoardProps) {
     <div className="w-full">
       {/* Board Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Project Board</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-2xl font-bold">Project Board</h2>
+          {user && (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                {permissions.userRole}
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {permissions.roleDescription}
+              </Badge>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-6 text-sm text-muted-foreground">
           <span>Total: {tasks.length} tasks</span>
           <span>•</span>
@@ -436,14 +585,17 @@ export function KanbanBoard({}: KanbanBoardProps) {
                         <Minimize2 className="h-4 w-4" />
                       )}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleAddTask(column.id)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    {permissions.canCreate && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleAddTask(column.id)}
+                        title="Add task"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -477,6 +629,29 @@ export function KanbanBoard({}: KanbanBoardProps) {
                 <p className="text-xs text-muted-foreground">
                   {column.description}
                 </p>
+                
+                {/* Filter Input */}
+                <div className="mt-3 relative">
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Filter tasks..."
+                    value={columnFilters[column.id]}
+                    onChange={(e) => handleFilterChange(column.id, e.target.value)}
+                    className="pl-8 pr-8 h-8 text-sm"
+                  />
+                  {columnFilters[column.id] && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-1/2 transform -translate-y-1/2 h-8 w-8"
+                      onClick={() => handleClearFilter(column.id)}
+                      title="Clear filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
 
               {/* Column Content */}
@@ -489,28 +664,40 @@ export function KanbanBoard({}: KanbanBoardProps) {
                     <DroppableArea id={column.id}>
                       {columnTasks.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                          <button 
-                            className="rounded-full bg-muted p-3 mb-2 hover:bg-muted/80 transition-colors"
-                            onClick={() => handleAddTask(column.id)}
-                            title={`Add task to ${column.title}`}
-                          >
-                            <Plus className="h-5 w-5" />
-                          </button>
+                          {permissions.canCreate && (
+                            <button 
+                              className="rounded-full bg-muted p-3 mb-2 hover:bg-muted/80 transition-colors"
+                              onClick={() => handleAddTask(column.id)}
+                              title={`Add task to ${column.title}`}
+                            >
+                              <Plus className="h-5 w-5" />
+                            </button>
+                          )}
                           <p className="text-sm">No tasks yet</p>
-                          <p className="text-xs">Add a task to get started</p>
+                          {permissions.canCreate && (
+                            <p className="text-xs">Add a task to get started</p>
+                          )}
                         </div>
                       ) : (
-                        columnTasks.map((task) => (
-                          <TaskCard
-                            key={task.id}
-                            task={task}
-                            onStatusChange={handleTaskStatusChange}
-                            onEdit={handleEditTask}
-                            disableDrag={!mounted}
-                            isMinimized={minimizedCards.has(task.id)}
-                            onToggleMinimize={handleToggleCardMinimize}
-                          />
-                        ))
+                        columnTasks.map((task) => {
+                          const taskPerms = getTaskPermissions(task)
+                          return (
+                            <TaskCard
+                              key={task.id}
+                              task={task}
+                              onStatusChange={handleTaskStatusChange}
+                              onEdit={handleEditTask}
+                              onView={handleViewTask}
+                              onDelete={handleDeleteTask}
+                              disableDrag={!mounted}
+                              isMinimized={minimizedCards.has(task.id)}
+                              onToggleMinimize={handleToggleCardMinimize}
+                              canEdit={taskPerms.canEdit}
+                              canMove={taskPerms.canMove}
+                              canDelete={taskPerms.canDelete}
+                            />
+                          )
+                        })
                       )}
                     </DroppableArea>
                   </SortableContext>
@@ -518,28 +705,40 @@ export function KanbanBoard({}: KanbanBoardProps) {
                   <div className="space-y-3 min-h-[100px] p-1">
                     {columnTasks.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                        <button 
-                          className="rounded-full bg-muted p-3 mb-2 hover:bg-muted/80 transition-colors"
-                          onClick={() => handleAddTask(column.id)}
-                          title={`Add task to ${column.title}`}
-                        >
-                          <Plus className="h-5 w-5" />
-                        </button>
+                        {permissions.canCreate && (
+                          <button 
+                            className="rounded-full bg-muted p-3 mb-2 hover:bg-muted/80 transition-colors"
+                            onClick={() => handleAddTask(column.id)}
+                            title={`Add task to ${column.title}`}
+                          >
+                            <Plus className="h-5 w-5" />
+                          </button>
+                        )}
                         <p className="text-sm">No tasks yet</p>
-                        <p className="text-xs">Add a task to get started</p>
+                        {permissions.canCreate && (
+                          <p className="text-xs">Add a task to get started</p>
+                        )}
                       </div>
                     ) : (
-                      columnTasks.map((task) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          onStatusChange={handleTaskStatusChange}
-                          onEdit={handleEditTask}
-                          disableDrag={true}
-                          isMinimized={minimizedCards.has(task.id)}
-                          onToggleMinimize={handleToggleCardMinimize}
-                        />
-                      ))
+                      columnTasks.map((task) => {
+                        const taskPerms = getTaskPermissions(task)
+                        return (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            onStatusChange={handleTaskStatusChange}
+                            onEdit={handleEditTask}
+                            onView={handleViewTask}
+                            onDelete={handleDeleteTask}
+                            disableDrag={true}
+                            isMinimized={minimizedCards.has(task.id)}
+                            onToggleMinimize={handleToggleCardMinimize}
+                            canEdit={taskPerms.canEdit}
+                            canMove={taskPerms.canMove}
+                            canDelete={taskPerms.canDelete}
+                          />
+                        )
+                      })
                     )}
                   </div>
                 )}
@@ -568,9 +767,14 @@ export function KanbanBoard({}: KanbanBoardProps) {
                 task={activeTask}
                 onStatusChange={() => {}}
                 onEdit={() => {}}
+                onView={() => {}}
+                onDelete={() => {}}
                 disableDrag={true}
                 isMinimized={minimizedCards.has(activeTask.id)}
                 onToggleMinimize={() => {}}
+                canEdit={getTaskPermissions(activeTask).canEdit}
+                canMove={getTaskPermissions(activeTask).canMove}
+                canDelete={getTaskPermissions(activeTask).canDelete}
               />
             ) : null}
           </DragOverlay>
@@ -585,6 +789,13 @@ export function KanbanBoard({}: KanbanBoardProps) {
         open={!!editingTask}
         onClose={() => setEditingTask(null)}
         onSave={handleTaskUpdate}
+      />
+
+      {/* View Task Dialog */}
+      <ViewTaskDialog
+        task={viewingTask}
+        open={!!viewingTask}
+        onClose={() => setViewingTask(null)}
       />
 
       {/* Add Task Dialog */}

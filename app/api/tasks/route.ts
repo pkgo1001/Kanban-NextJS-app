@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Priority, Status } from '@prisma/client'
 import { Task, TaskPriority, TaskStatus } from '@/components/task-card'
+import { getAuthenticatedUser } from '@/lib/auth-helpers'
+import { canCreateTask } from '@/lib/permissions'
 
 // Type conversion utilities
 const priorityFromEnum = (priority: Priority): TaskPriority => {
@@ -47,6 +49,8 @@ const transformTaskFromDb = (dbTask: any): Task => {
     priority: priorityFromEnum(dbTask.priority),
     status: statusFromEnum(dbTask.status),
     assignee: dbTask.assignee?.name || undefined,
+    assigneeId: dbTask.assigneeId || null,
+    ownerId: dbTask.ownerId || null,
     dueDate: dbTask.dueDate ? dbTask.dueDate.toISOString().split('T')[0] : undefined,
     tags: dbTask.tags?.map((taskTag: any) => taskTag.tag.name) || []
   }
@@ -83,6 +87,23 @@ export async function GET() {
 // POST /api/tasks - Create a new task
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication and permissions
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has permission to create tasks
+    if (!canCreateTask(user.role)) {
+      return NextResponse.json(
+        { error: 'You do not have permission to create tasks' },
+        { status: 403 }
+      );
+    }
+
     const taskData = await request.json()
     
     // Find assignee if provided

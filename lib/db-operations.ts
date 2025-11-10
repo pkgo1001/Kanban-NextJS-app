@@ -13,12 +13,32 @@ const getBaseUrl = () => {
     : 'http://localhost:3000'
 }
 
+// Helper to get auth headers
+const getAuthHeaders = () => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  }
+  
+  // Add authorization header if token exists
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+  }
+  
+  return headers
+}
+
 // HTTP client helper
 const apiClient = {
   async get(endpoint: string) {
-    const response = await fetch(`${getBaseUrl()}/api${endpoint}`)
+    const response = await fetch(`${getBaseUrl()}/api${endpoint}`, {
+      headers: getAuthHeaders(),
+    })
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(error.error || `HTTP error! status: ${response.status}`)
     }
     return response.json()
   },
@@ -26,13 +46,12 @@ const apiClient = {
   async post(endpoint: string, data: any) {
     const response = await fetch(`${getBaseUrl()}/api${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     })
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(error.error || `HTTP error! status: ${response.status}`)
     }
     return response.json()
   },
@@ -40,13 +59,12 @@ const apiClient = {
   async put(endpoint: string, data: any) {
     const response = await fetch(`${getBaseUrl()}/api${endpoint}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     })
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(error.error || `HTTP error! status: ${response.status}`)
     }
     return response.json()
   },
@@ -54,13 +72,12 @@ const apiClient = {
   async patch(endpoint: string, data: any) {
     const response = await fetch(`${getBaseUrl()}/api${endpoint}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     })
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(error.error || `HTTP error! status: ${response.status}`)
     }
     return response.json()
   },
@@ -68,9 +85,11 @@ const apiClient = {
   async delete(endpoint: string) {
     const response = await fetch(`${getBaseUrl()}/api${endpoint}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     })
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(error.error || `HTTP error! status: ${response.status}`)
     }
     return response.json()
   },

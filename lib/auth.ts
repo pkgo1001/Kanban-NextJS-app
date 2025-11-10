@@ -168,7 +168,9 @@ export interface User {
   id: string
   email: string
   name?: string
+  role: 'ADMIN' | 'SUPERVISOR' | 'EMPLOYEE' | 'VIEWER'
   emailVerified: boolean
+  assigneeId?: string | null
   createdAt: Date
   updatedAt: Date
 }

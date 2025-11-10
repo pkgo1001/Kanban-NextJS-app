@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, User, Edit3, GripVertical, ChevronDown, ChevronUp } from "lucide-react"
+import { Calendar, User, Edit3, Eye, Trash2, GripVertical, ChevronDown, ChevronUp } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
@@ -15,6 +15,8 @@ export interface Task {
   priority: TaskPriority
   status: TaskStatus
   assignee?: string
+  assigneeId?: string | null
+  ownerId?: string | null
   dueDate?: string
   tags?: string[]
 }
@@ -23,9 +25,14 @@ interface TaskCardProps {
   task: Task
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => void
   onEdit?: (task: Task) => void
+  onView?: (task: Task) => void
+  onDelete?: (taskId: string) => void
   disableDrag?: boolean
   isMinimized?: boolean
   onToggleMinimize?: (taskId: string) => void
+  canEdit?: boolean
+  canMove?: boolean
+  canDelete?: boolean
 }
 
 const priorityColors = {
@@ -40,10 +47,25 @@ const statusColors = {
   done: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
 }
 
-export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, isMinimized = false, onToggleMinimize }: TaskCardProps) {
+export function TaskCard({ 
+  task, 
+  onStatusChange, 
+  onEdit, 
+  onView,
+  onDelete,
+  disableDrag = false, 
+  isMinimized = false, 
+  onToggleMinimize,
+  canEdit = true,
+  canMove = true,
+  canDelete = false
+}: TaskCardProps) {
+  // Disable drag if user doesn't have permission or if explicitly disabled
+  const shouldDisableDrag = disableDrag || !canMove
+  
   const sortable = useSortable({ 
     id: task.id,
-    disabled: disableDrag
+    disabled: shouldDisableDrag
   })
 
   const {
@@ -55,7 +77,7 @@ export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, is
     isDragging,
   } = sortable
 
-  const style = disableDrag ? {} : {
+  const style = shouldDisableDrag ? {} : {
     transform: CSS.Transform.toString(transform),
     transition,
   }
@@ -72,6 +94,18 @@ export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, is
     }
   }
 
+  const handleView = () => {
+    if (onView) {
+      onView(task)
+    }
+  }
+
+  const handleDelete = () => {
+    if (onDelete && window.confirm(`Are you sure you want to delete "${task.title}"?`)) {
+      onDelete(task.id)
+    }
+  }
+
   const handleToggleMinimize = () => {
     if (onToggleMinimize) {
       onToggleMinimize(task.id)
@@ -80,10 +114,10 @@ export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, is
 
   return (
     <Card 
-      ref={disableDrag ? undefined : setNodeRef}
+      ref={shouldDisableDrag ? undefined : setNodeRef}
       style={style}
       className={`w-full hover:shadow-md transition-all duration-200 ${
-        !disableDrag && isDragging ? 'opacity-50 rotate-2 shadow-lg' : ''
+        !shouldDisableDrag && isDragging ? 'opacity-50 rotate-2 shadow-lg' : ''
       } ${isMinimized ? 'pb-2' : ''}`}
     >
       {isMinimized ? (
@@ -92,7 +126,7 @@ export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, is
           <div className="flex items-center justify-between gap-2">
             {/* Left side: Drag handle and title */}
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              {!disableDrag && (
+              {canMove && (
                 <button
                   className="cursor-grab active:cursor-grabbing hover:bg-muted p-1 rounded flex-shrink-0"
                   {...attributes}
@@ -122,14 +156,27 @@ export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, is
               >
                 {task.priority.charAt(0).toUpperCase()}
               </Badge>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={handleEdit}
-              >
-                <Edit3 className="h-3 w-3" />
-              </Button>
+              {canEdit ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleEdit}
+                  title="Edit task"
+                >
+                  <Edit3 className="h-3 w-3" />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleView}
+                  title="View task details"
+                >
+                  <Eye className="h-3 w-3" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -147,7 +194,7 @@ export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, is
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-2 flex-1">
-                {!disableDrag && (
+                {canMove && (
                   <button
                     className="mt-1 cursor-grab active:cursor-grabbing hover:bg-muted p-1 rounded"
                     {...attributes}
@@ -156,12 +203,12 @@ export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, is
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
                   </button>
                 )}
-                <div className="flex-1">
-                  <CardTitle className="text-sm font-medium leading-5">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-sm font-medium leading-5 break-words">
                     {task.title}
                   </CardTitle>
                   {task.description && (
-                    <CardDescription className="text-xs text-muted-foreground mt-1">
+                    <CardDescription className="text-xs text-muted-foreground mt-1 break-words line-clamp-3">
                       {task.description}
                     </CardDescription>
                   )}
@@ -174,14 +221,38 @@ export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, is
                 >
                   {task.priority}
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={handleEdit}
-                >
-                  <Edit3 className="h-3 w-3" />
-                </Button>
+                {canEdit ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handleEdit}
+                    title="Edit task"
+                  >
+                    <Edit3 className="h-3 w-3" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handleView}
+                    title="View task details"
+                  >
+                    <Eye className="h-3 w-3" />
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive hover:text-destructive"
+                    onClick={handleDelete}
+                    title="Delete task"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -221,39 +292,41 @@ export function TaskCard({ task, onStatusChange, onEdit, disableDrag = false, is
               )}
             </div>
 
-            {/* Status Actions */}
-            <div className="flex flex-wrap gap-1 mt-4">
-              {task.status !== 'todo' && (
-                <Button 
+            {/* Status Actions - only show if user can move task */}
+            {canMove && (
+              <div className="flex flex-wrap gap-1 mt-4">
+                {task.status !== 'todo' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs h-7"
+                    onClick={() => handleStatusChange('todo')}
+                  >
+                    TODO
+                  </Button>
+                )}
+                {task.status !== 'in-progress' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs h-7"
+                    onClick={() => handleStatusChange('in-progress')}
+                  >
+                    {task.status === 'todo' ? 'Start' : 'Progress'}
+                  </Button>
+                )}
+                {task.status !== 'done' && (
+                  <Button 
                   variant="outline" 
                   size="sm" 
                   className="text-xs h-7"
-                  onClick={() => handleStatusChange('todo')}
+                  onClick={() => handleStatusChange('done')}
                 >
-                  TODO
+                  Done
                 </Button>
               )}
-              {task.status !== 'in-progress' && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-xs h-7"
-                  onClick={() => handleStatusChange('in-progress')}
-                >
-                  {task.status === 'todo' ? 'Start' : 'Progress'}
-                </Button>
-              )}
-              {task.status !== 'done' && (
-                <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs h-7"
-                onClick={() => handleStatusChange('done')}
-              >
-                Done
-              </Button>
+            </div>
             )}
-          </div>
         </CardContent>
       </>
     )}
