@@ -6,9 +6,14 @@ import bcrypt from 'bcryptjs'
 // GET /api/users - List all users (Admin only)
 export async function GET(request: NextRequest) {
   try {
+    console.log('[API /users] GET request received');
+    console.log('[API /users] Authorization header:', request.headers.get('authorization'));
+    
     const user = await getAuthenticatedUser(request);
+    console.log('[API /users] Authenticated user:', user);
     
     if (!user) {
+      console.log('[API /users] No user found, returning 401');
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -17,11 +22,14 @@ export async function GET(request: NextRequest) {
 
     // Only admins can view users
     if (user.role !== 'ADMIN') {
+      console.log('[API /users] User is not admin, returning 403');
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }
       );
     }
+    
+    console.log('[API /users] Fetching users from database...');
 
     const users = await prisma.user.findMany({
       select: {

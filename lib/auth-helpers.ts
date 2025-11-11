@@ -18,20 +18,28 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
   try {
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization');
+    console.log('[auth-helpers] Auth header:', authHeader);
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[auth-helpers] No valid auth header');
       return null;
     }
 
     // Extract user ID from the simple token (temp_token_userId_timestamp)
     // In production, validate a real JWT here
     const token = authHeader.replace('Bearer ', '');
+    console.log('[auth-helpers] Token:', token);
+    
     const parts = token.split('_');
+    console.log('[auth-helpers] Token parts:', parts);
     
     if (parts.length < 3 || parts[0] !== 'temp' || parts[1] !== 'token') {
+      console.log('[auth-helpers] Invalid token format');
       return null;
     }
 
     const userId = parts[2];
+    console.log('[auth-helpers] Extracted userId:', userId);
 
     // Fetch user from database
     const user = await prisma.user.findUnique({

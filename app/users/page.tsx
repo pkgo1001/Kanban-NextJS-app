@@ -56,21 +56,30 @@ export default function UsersPage() {
     try {
       setLoading(true)
       setError(null)
+      
+      const token = localStorage.getItem('auth_token')
+      console.log('Token:', token)
+      
       const response = await fetch('/api/users', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       })
 
+      console.log('Response status:', response.status)
+
       if (!response.ok) {
-        throw new Error('Failed to fetch users')
+        const errorData = await response.json()
+        console.error('Error response:', errorData)
+        throw new Error(errorData.error || 'Failed to fetch users')
       }
 
       const data = await response.json()
+      console.log('Users data:', data)
       setUsers(data)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching users:', err)
-      setError('Failed to load users')
+      setError(err.message || 'Failed to load users')
     } finally {
       setLoading(false)
     }
@@ -91,7 +100,7 @@ export default function UsersPage() {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       })
 
