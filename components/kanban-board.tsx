@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,7 +10,7 @@ import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { AddTaskDialog } from "@/components/add-task-dialog"
 import { ViewTaskDialog } from "@/components/view-task-dialog"
 import { Input } from "@/components/ui/input"
-import { Plus, MoreHorizontal, Minimize2, Maximize2, Loader2, Palette, Shield, X, Search } from "lucide-react"
+import { Plus, MoreHorizontal, Minimize2, Maximize2, Loader2, Palette, Shield, X, Search, Users } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { usePermissions } from "@/lib/hooks/usePermissions"
 import {
@@ -98,6 +99,7 @@ function DroppableArea({
 
 export function KanbanBoard({}: KanbanBoardProps) {
   // Auth and permissions
+  const router = useRouter()
   const { user } = useAuth()
   const permissions = usePermissions()
   
@@ -532,6 +534,17 @@ export function KanbanBoard({}: KanbanBoardProps) {
           <h2 className="text-2xl font-bold">Project Board</h2>
           {user && (
             <div className="flex items-center gap-2">
+              {permissions.userRole === 'ADMIN' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/users')}
+                  className="flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  User Management
+                </Button>
+              )}
               <Badge variant="outline" className="flex items-center gap-1">
                 <Shield className="h-3 w-3" />
                 {permissions.userRole}

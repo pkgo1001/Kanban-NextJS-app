@@ -281,3 +281,7 @@ cat .env.production
 - [Prisma Multiple Environments](https://www.prisma.io/docs/guides/deployment/deployment-guides)
 - [GitHub Environments Documentation](https://docs.github.com/en/actions/deployment/targeting-different-environments)
 
+##
+All seeded test users (Sarah Chen, John Smith, etc.) exist in all three databases with various roles for RBAC testing
+Password for all seeded users: password123
+Password for all admin users: admin123
