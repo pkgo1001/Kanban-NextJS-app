@@ -1,4 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
+import { getBaseURL } from './Playwright/config/test-config';
+
+/**
+ * Get base URL based on TEST_ENV environment variable
+ * Defaults to development (localhost:3000)
+ */
+const BASE_URL = getBaseURL();
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -28,7 +35,7 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
-    baseURL: 'http://localhost:3000',
+    baseURL: BASE_URL,
     
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
