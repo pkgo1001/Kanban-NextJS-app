@@ -58,7 +58,6 @@ export default function UsersPage() {
       setError(null)
       
       const token = localStorage.getItem('auth_token')
-      console.log('Token:', token)
       
       const response = await fetch('/api/users', {
         headers: {
@@ -66,16 +65,12 @@ export default function UsersPage() {
         }
       })
 
-      console.log('Response status:', response.status)
-
       if (!response.ok) {
         const errorData = await response.json()
-        console.error('Error response:', errorData)
         throw new Error(errorData.error || 'Failed to fetch users')
       }
 
       const data = await response.json()
-      console.log('Users data:', data)
       setUsers(data)
     } catch (err: any) {
       console.error('Error fetching users:', err)
