@@ -22,7 +22,7 @@ export class LoginPage {
     this.page = page;
     
     // Initialize locators
-    this.pageTitle = page.getByRole('heading', { name: 'Sign In' });
+    this.pageTitle = page.getByRole('heading', { name: 'Welcome Back' });
     this.emailInput = page.getByPlaceholder('your@email.com');
     this.passwordInput = page.getByPlaceholder('Enter your password');
     this.passwordToggleButton = page.getByRole('button').filter({ has: page.locator('svg') }).nth(1); // Eye icon button

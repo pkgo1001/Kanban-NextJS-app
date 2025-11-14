@@ -33,22 +33,22 @@ const config: Record<Environment, EnvironmentConfig> = {
         name: 'Admin Dev'
       },
       supervisor: {
-        email: 'alex.rodriguez@company.com',
-        password: 'password123',
+        email: 'robert.kim@company.com',
+        password: 'Testing1234!',
         role: 'SUPERVISOR',
-        name: 'Alex Rodriguez'
+        name: 'Robert Kim'
       },
       employee: {
         email: 'sarah.chen@company.com',
-        password: 'password123',
+        password: 'Testing1234!',
         role: 'EMPLOYEE',
         name: 'Sarah Chen'
       },
       viewer: {
-        email: 'john.smith@company.com',
-        password: 'password123',
+        email: 'alex.rodriguez@company.com',
+        password: 'Testing1234!',
         role: 'VIEWER',
-        name: 'John Smith'
+        name: 'Alex Rodriguez'
       }
     }
   },

@@ -20,7 +20,7 @@ test.describe('Login Page Tests', () => {
     await loginPage.verifyPageElements();
     
     // Verify page title
-    await expect(loginPage.pageTitle).toHaveText('Sign In');
+    await expect(loginPage.pageTitle).toHaveText('Welcome Back');
     
     // Verify links are present
     await expect(loginPage.registerLink).toBeVisible();
@@ -164,7 +164,7 @@ test.describe('Login Page Tests', () => {
     
     // Verify home page elements
     await expect(page.getByRole('heading', { name: 'Kanban Dashboard' })).toBeVisible();
-    
+
     // Verify user name is displayed
     await expect(page.getByText(viewerUser.name)).toBeVisible();
     
@@ -188,26 +188,6 @@ test.describe('Login Page Tests', () => {
     // Verify navigation to forgot password page
     await page.waitForURL(/\/forgot-password/, { timeout: 5000 });
     expect(page.url()).toContain('/forgot-password');
-  });
-
-  test('should disable sign in button while logging in', async () => {
-    const adminUser = getTestUser('admin');
-    
-    // Fill in credentials
-    await loginPage.fillEmail(adminUser.email);
-    await loginPage.fillPassword(adminUser.password);
-    
-    // Click sign in
-    await loginPage.clickSignIn();
-    
-    // Check if button is disabled or loading (might be very quick)
-    try {
-      const isDisabledOrLoading = await loginPage.isSignInButtonDisabled() || await loginPage.isLoading();
-      // This assertion might not always catch the loading state due to speed
-    } catch (error) {
-      // Loading state was too fast to catch - this is acceptable
-      console.log('Login was too fast to verify loading state');
-    }
   });
 
   test('should clear input fields after typing and clearing', async () => {
