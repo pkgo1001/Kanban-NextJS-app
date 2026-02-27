@@ -1,0 +1,2 @@
+dentro de esta carpeta iria el codigo fuente de la app a la que le estariamos creando los test.
+En estos momento esta en Node JS, asi que por eso no hay nada
