@@ -13,6 +13,7 @@
 # testing
 /coverage
 /Playwright/test-results/
+/Automation/Selenium/src/test/testResults/
 /Playwright/reports/
 /Playwright/screenshots/
 /Playwright/videos/

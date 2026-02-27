@@ -23,7 +23,10 @@ class LoginPageTest {
     void setUp() {
         config = TestConfig.get();
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless=new");
+        // Headless by default; use -Dheadless=false for headed (browser visible)
+        if (!"false".equalsIgnoreCase(System.getProperty("headless", "true"))) {
+            options.addArguments("--headless=new");
+        }
         driver = new ChromeDriver(options);
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
         driver.manage().window().maximize();

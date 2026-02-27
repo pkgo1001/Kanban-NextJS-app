@@ -17,6 +17,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <selenium.version>4.27.0</selenium.version>
         <junit.version>5.10.2</junit.version>
+        <!-- Formato para la carpeta del reporte HTML (fecha y hora del run) -->
+        <maven.build.timestamp.format>yyyy-MM-dd_HH-mm-ss</maven.build.timestamp.format>
+        <!-- Ruta base del reporte: src/test/testResults/HTMLresults/ResultsFrom_<timestamp> -->
+        <surefire.report.output.dir>${project.basedir}/src/test/testResults/HTMLresults/ResultsFrom_${maven.build.timestamp}</surefire.report.output.dir>
     </properties>
 
     <dependencies>
@@ -54,7 +58,54 @@
                     <systemPropertyVariables>
                         <test.env>${test.env}</test.env>
                     </systemPropertyVariables>
+                    <!-- No abortar el build cuando hay fallos: así se genera el reporte HTML y se muestra el enlace -->
+                    <testFailureIgnore>true</testFailureIgnore>
                 </configuration>
+            </plugin>
+            <!-- Genera el reporte HTML después de cada ejecución de tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>3.2.5</version>
+                <executions>
+                    <execution>
+                        <id>surefire-report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${surefire.report.output.dir}</outputDirectory>
+                            <outputName>surefire-report</outputName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Imprime el enlace al reporte HTML al final del run -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>echo-report-link</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo>------------------------------------------------------------------------</echo>
+                                <echo>Reporte HTML de pruebas generado en:</echo>
+                                <echo>  ${surefire.report.output.dir}</echo>
+                                <echo> </echo>
+                                <echo>Abrir en el navegador (copia y pega en la barra de direcciones):</echo>
+                                <echo>  file://${surefire.report.output.dir}/surefire-report.html</echo>
+                                <echo>------------------------------------------------------------------------</echo>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
