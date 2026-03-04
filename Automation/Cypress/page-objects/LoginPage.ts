@@ -3,6 +3,10 @@ export class LoginPage {
       cy.visit('/login');
       return this;
     }
+    /*visit(baseURL:String){
+      cy.visit(baseURL + '/login');
+      return this;
+    }*/
   
     get pageTitle() { return cy.get('h1, h2').contains('Welcome Back'); }
     get emailInput() { return cy.get('input[placeholder="your@email.com"]'); }

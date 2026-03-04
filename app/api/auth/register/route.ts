@@ -41,19 +41,33 @@ export async function POST(request: NextRequest) {
     // Generate email verification token
     const emailVerificationToken = TokenUtils.generateEmailVerificationToken()
 
-    // Create user
+    // Create user with assignee profile
+    // First, create the assignee
+    const assignee = await prisma.assignee.create({
+      data: {
+        name: name || email.split('@')[0], // Use name or email username as fallback
+        email,
+        role: 'Team Member', // Default role
+        department: 'General', // Default department
+      }
+    })
+
+    // Then create the user linked to the assignee
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         emailVerificationToken,
+        assigneeId: assignee.id, // Link to assignee
       },
       select: {
         id: true,
         email: true,
         name: true,
+        role: true,
         emailVerified: true,
+        assigneeId: true,
         createdAt: true,
         updatedAt: true,
       }

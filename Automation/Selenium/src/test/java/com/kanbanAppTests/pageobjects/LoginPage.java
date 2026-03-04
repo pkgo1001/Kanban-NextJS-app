@@ -13,7 +13,7 @@ public class LoginPage {
     private final WebDriver driver;
     private final WebDriverWait wait;
 
-    private static final By PAGE_TITLE = By.xpath("//*[contains(text(),'Welcome Back')]");
+    private static final By PAGE_TITLE = By.xpath("//*[contains(text(),'Welcome Back')]"); //By es el tipo de dato definido por selenium para almacenar las ubicaciones de los elementos en la pagina.
     private static final By EMAIL_INPUT = By.cssSelector("input[placeholder='your@email.com']");
     private static final By PASSWORD_INPUT = By.cssSelector("input[placeholder='Enter your password']");
     private static final By SIGN_IN_BUTTON = By.xpath("//button[contains(.,'Sign In')]");

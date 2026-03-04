@@ -4,7 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers'
 import bcrypt from 'bcryptjs'
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 // PUT /api/users/[id] - Update user (Admin only)
@@ -27,9 +27,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const userId = params.id;
+    const { id: userId } = await params;
     const body = await request.json();
-    const { name, email, role } = body;
+    const { name, email, role, assigneeRole } = body;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -57,31 +57,41 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(name && { name }),
-        ...(email && { email }),
-        ...(role && { role })
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        emailVerified: true,
-        assigneeId: true,
-        createdAt: true,
-        updatedAt: true,
-        assignee: {
-          select: {
-            name: true,
-            department: true,
-            role: true
+    const trimmedAssigneeRole = typeof assigneeRole === 'string' ? assigneeRole.trim() : '';
+
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      if (trimmedAssigneeRole && existingUser.assigneeId) {
+        await tx.assignee.update({
+          where: { id: existingUser.assigneeId },
+          data: { role: trimmedAssigneeRole }
+        });
+      }
+
+      return tx.user.update({
+        where: { id: userId },
+        data: {
+          ...(name && { name }),
+          ...(email && { email }),
+          ...(role && { role })
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          emailVerified: true,
+          assigneeId: true,
+          createdAt: true,
+          updatedAt: true,
+          assignee: {
+            select: {
+              name: true,
+              department: true,
+              role: true
+            }
           }
         }
-      }
+      });
     });
 
     return NextResponse.json(updatedUser);
@@ -114,7 +124,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const userId = params.id;
+    const { id: userId } = await params;
 
     // Prevent self-deletion
     if (userId === user.id) {

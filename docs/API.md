@@ -31,7 +31,7 @@ Register a new user.
 
 - Request body (application/json):
   - email: string (required)
-  - password: string (required)
+  - password: string (required, min 8 chars, must contain uppercase, lowercase, and number)
   - name: string (required)
 
 - Response (201):
@@ -42,7 +42,11 @@ Register a new user.
   - 409 User with this email already exists
   - 500 Internal server error
 
-- Notes: produces an email verification token (logged to server in dev). Email sending is TODO.
+- Notes: 
+  - Automatically creates an Assignee profile linked to the user (for task assignments)
+  - Assignee defaults: role="Team Member", department="General"
+  - Produces an email verification token (logged to server in dev)
+  - Email sending is TODO
 
 ---
 
@@ -198,6 +202,26 @@ Reset a user's password (Admin only).
 - Validation: password must be at least 6 characters
 - Response (200): { success: true, message }
 - Errors: 400, 401, 403, 404, 500
+
+### POST /api/users/[id]/verify-email
+Manually verify a user's email (Admin only).
+
+- Auth: Admin required
+- Path param: id (user ID)
+- Request body: none
+- Response (200): { message: 'Email verified successfully', user: {...} }
+- Side effects:
+  - Sets `emailVerified` to `true`
+  - Clears `emailVerificationToken`
+  - Enables full system access for the user
+- Errors: 401, 403, 404, 500
+
+Example cURL:
+
+```bash
+curl -X POST http://localhost:3000/api/users/<USER_ID>/verify-email \
+  -H "Authorization: Bearer <ADMIN_TOKEN>"
+```
 
 ---
 

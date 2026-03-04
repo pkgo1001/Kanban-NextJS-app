@@ -13,6 +13,11 @@ interface User {
   email: string
   name: string | null
   role: string
+  assignee?: {
+    name: string
+    department: string
+    role: string
+  } | null
 }
 
 interface EditUserDialogProps {
@@ -27,7 +32,8 @@ export function EditUserDialog({ user, open, onClose, onSuccess }: EditUserDialo
   const [formData, setFormData] = useState({
     email: '',
     name: '',
-    role: 'EMPLOYEE'
+    role: 'EMPLOYEE',
+    assigneeRole: ''
   })
 
   useEffect(() => {
@@ -35,7 +41,8 @@ export function EditUserDialog({ user, open, onClose, onSuccess }: EditUserDialo
       setFormData({
         email: user.email,
         name: user.name || '',
-        role: user.role
+        role: user.role,
+        assigneeRole: user.assignee?.role || ''
       })
     }
   }, [user, open])
@@ -85,7 +92,7 @@ export function EditUserDialog({ user, open, onClose, onSuccess }: EditUserDialo
         <DialogHeader>
           <DialogTitle>Edit User</DialogTitle>
           <DialogDescription>
-            Update user information and role
+            Update user information, role, and assignee position
           </DialogDescription>
         </DialogHeader>
 
@@ -129,6 +136,25 @@ export function EditUserDialog({ user, open, onClose, onSuccess }: EditUserDialo
                 <SelectItem value="VIEWER">Viewer - Read-only access</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="border-t pt-4 space-y-3">
+            <h3 className="font-medium text-sm">Assignee Details (Optional)</h3>
+            {user.assignee ? (
+              <div>
+                <Label htmlFor="edit-assignee-role">Position</Label>
+                <Input
+                  id="edit-assignee-role"
+                  value={formData.assigneeRole}
+                  onChange={(e) => setFormData({ ...formData, assigneeRole: e.target.value })}
+                  placeholder="UI Engineer"
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                This user has no assignee profile. Create one to enable position editing.
+              </p>
+            )}
           </div>
 
           <DialogFooter>

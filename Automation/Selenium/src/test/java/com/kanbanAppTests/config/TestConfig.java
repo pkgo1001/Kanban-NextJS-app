@@ -60,9 +60,9 @@ public class TestConfig {
     );
 
     public static TestConfig get() {
-        String env = System.getProperty("test.env", "development").toLowerCase();
+        String env = System.getProperty("test.env", "development").toLowerCase();//test.env is the environment variable that is set when running the command mvn test -Dtest.env=development. System.getProperty is a method that returns the value of the system property with the given name, if not set, it returns the default value, in this case, development. toLowerCase is a method that converts the string to lowercase.
         if (env.equals("qa") || env.equals("staging")) return CONFIG.get(Environment.qa);
         if (env.equals("prod") || env.equals("production")) return CONFIG.get(Environment.production);
-        return CONFIG.get(Environment.development);
+        return CONFIG.get(Environment.development);//if the environment is not set, it returns the development environment.
     }
 }

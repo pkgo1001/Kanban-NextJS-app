@@ -1,6 +1,17 @@
+/**.
+ * Este archivo contiene custom commands para cypres, de manera que los ysemos como cy.mycomando en el test.
+ */
+
 import { getTestUser } from './test-config';
 
-declare global {//declare global is a global namespace for cypress, it is used to declare global variables, functions, classes, etc.. for cypress.
+/*
+declare global { namespace Cypress { interface Chainable { ... } } } es como la ruta en el sistema de tipos:
+global → en el ámbito global
+Cypress → en el namespace de Cypress
+Chainable → en la interfaz que describe qué métodos tiene cy
+Ahí estás diciendo: “En esa interfaz Chainable que ya existe en ese sitio, añade las firmas de login y loginAs”.*/
+
+declare global {// Lo usa Tyoescript para poner cosas donde typescript define los tipos de datos, o sea, en global, JS no lo necesita
   namespace Cypress {//namespace Cypress is a namespace for cypress, it is used to declare global variables, functions, classes, etc.. for cypress.
     interface Chainable {//interface Chainable is a interface for cypress, it is used to declare global variables, functions, classes, etc.. for cypress.
       loginAs(role: 'admin' | 'supervisor' | 'employee' | 'viewer'): Chainable<void>; //loginAs is a function that is used to login as a user with a given role, it returns a chainable object.

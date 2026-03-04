@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, KeyRound, Shield, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, KeyRound, Shield, Loader2, CheckCircle } from "lucide-react"
 import { CreateUserDialog } from "@/components/create-user-dialog"
 import { EditUserDialog } from "@/components/edit-user-dialog"
 import { ResetPasswordDialog } from "@/components/reset-password-dialog"
@@ -112,6 +112,35 @@ export default function UsersPage() {
     }
   }
 
+  const handleVerifyEmail = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to verify the email for ${userName}?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/users/${userId}/verify-email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to verify email')
+      }
+
+      const data = await response.json()
+      alert(data.message || 'Email verified successfully!')
+      
+      // Refresh users list
+      fetchUsers()
+    } catch (err: any) {
+      console.error('Error verifying email:', err)
+      alert(err.message || 'Failed to verify email')
+    }
+  }
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -206,6 +235,17 @@ export default function UsersPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
+                        {!userData.emailVerified && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleVerifyEmail(userData.id, userData.name || userData.email)}
+                            title="Verify email"
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

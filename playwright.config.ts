@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { getBaseURL } from './Playwright/config/test-config';
+import { getBaseURL } from './Automation/Playwright/config/test-config';
 
 /**
  * Get base URL based on TEST_ENV environment variable
@@ -11,8 +11,8 @@ const BASE_URL = getBaseURL();
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  // Look for test files in the "Playwright/tests" directory
-  testDir: './Playwright/tests',
+  // Look for test files in Automation/Playwright/tests
+  testDir: './Automation/Playwright/tests',
   
   // Run tests in files in parallel
   fullyParallel: true,
@@ -27,10 +27,10 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   
   // Reporter to use
-  reporter: [['html', { outputFolder: './Playwright/reports/html-report' }]],
+  reporter: [['html', { outputFolder: './Automation/Playwright/reports/html-report' }]],
   
   // Output directory for test artifacts
-  outputDir: './Playwright/test-results',
+  outputDir: './Automation/Playwright/test-results',
   
   // Shared settings for all the projects below
   use: {

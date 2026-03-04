@@ -13,8 +13,11 @@
 # testing
 /coverage
 /Playwright/test-results/
-/Automation/Selenium/src/test/testResults/
 /Playwright/reports/
+/Automation/Playwright/test-results/
+/Automation/Playwright/reports/
+/Automation/Selenium/target/
+/Automation/Selenium/src/test/testResults/
 /Playwright/screenshots/
 /Playwright/videos/
 /playwright/.cache/

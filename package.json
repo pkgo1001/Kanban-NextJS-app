@@ -30,6 +30,7 @@
     "db:create-admin:qa": "dotenv -e .env.qa -- ts-node scripts/create-admin-users.ts",
     "db:create-admin:prod": "dotenv -e .env.production -- ts-node scripts/create-admin-users.ts",
     "test": "playwright test",
+    "test:playwright": "playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "test:report": "playwright show-report",
@@ -40,7 +41,15 @@
     "test:critical": "playwright test --grep @critical",
     "test:chromium": "playwright test --project=chromium",
     "test:firefox": "playwright test --project=firefox",
-    "test:webkit": "playwright test --project=webkit"
+    "test:webkit": "playwright test --project=webkit",
+    "test:cypress": "cypress run",
+    "test:cypress:open": "cypress open",
+    "test:cypress:dev": "TEST_ENV=development cypress run",
+    "test:cypress:qa": "TEST_ENV=qa cypress run",
+    "test:cypress:prod": "TEST_ENV=production cypress run",
+    "test:cypress:dev:open": "TEST_ENV=development cypress open",
+    "test:cypress:qa:open": "TEST_ENV=qa cypress open",
+    "test:cypress:prod:open": "TEST_ENV=production cypress open"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -62,7 +71,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.546.0",
-    "next": "15.5.6",
+    "next": "^15.5.12",
     "next-themes": "^0.4.6",
     "prisma": "^6.17.1",
     "react": "19.1.0",
@@ -72,15 +81,17 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
+    "@eslint/eslintrc": "^0.1.0",
     "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cypress": "^15.10.0",
+    "cypress-xpath": "^2.0.1",
     "dotenv-cli": "^11.0.0",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.6",
+    "eslint": "^10.0.1",
+    "eslint-config-next": "^16.1.6",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5"

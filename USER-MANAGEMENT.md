@@ -40,7 +40,7 @@ The User Management system provides a complete administrative interface for mana
   - ⚪ **VIEWER** - Gray badge
 - **Department** - User's department (from assignee profile)
 - **Status** - Email verification status (Verified/Pending)
-- **Actions** - Edit, Reset Password, Delete buttons
+- **Actions** - Verify Email (for unverified), Edit, Reset Password, Delete buttons
 
 **Features:**
 - Real-time user count display
@@ -134,7 +134,43 @@ The User Management system provides a complete administrative interface for mana
 
 ---
 
-### 5. 🗑️ Delete User
+### 5. ✅ Verify Email
+
+**Click the CheckCircle (green) icon** to verify a user's email manually.
+
+**When to Use:**
+- User cannot access verification email
+- Email verification email failed to send
+- Immediate account activation needed
+- Manual account verification required
+
+**Process:**
+1. Locate user with "Pending" status badge
+2. Click the green CheckCircle icon
+3. Confirm email verification
+4. Status changes to "Verified" immediately
+5. User can now access all system features
+
+**What Happens:**
+- `emailVerified` field set to `true`
+- Verification token cleared
+- User gains full system access
+- Can login without email verification step
+
+**Visibility:**
+- ✅ Button only shows for **unverified** users
+- ✅ Button disappears after verification
+- ✅ Admin-only action
+
+**Use Cases:**
+- Emergency account activation
+- Testing environments
+- Manual onboarding processes
+- Email delivery issues
+
+---
+
+### 6. 🗑️ Delete User
 
 **Click the Trash icon** to remove a user.
 
@@ -218,6 +254,18 @@ The User Management system provides a complete administrative interface for mana
   - User exists
   - Password length (min 6)
 - **Returns:** Success confirmation
+
+#### POST `/api/users/[id]/verify-email`
+- **Access:** Admin only
+- **Body:** None required
+- **Validation:**
+  - User exists
+  - Admin role check
+- **Returns:** Updated user object with emailVerified = true
+- **Side Effects:**
+  - Sets `emailVerified` to `true`
+  - Clears `emailVerificationToken`
+  - Enables full system access for user
 
 ---
 
